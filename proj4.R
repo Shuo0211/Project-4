@@ -12,6 +12,10 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,maxit=100,max.h
     H <- 0.5 * (t(H) + H)
   }
   
+Delta <- function(A,gradient){
+  Delta <- chol2inv(chol(A))%*%chol2inv(t(chol(A)))%*%(-gradient)
+}
+  
   if(is.finite(f)==FALSE || any(is.finite(gradient))==FALSE || any(is.finite(H))==FALSE){
     stop("The objective or derivatives are not finite at the initial theta.")
   }
@@ -29,9 +33,9 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,maxit=100,max.h
         per_iter <- per_iter + 1
       }
       # Calculate forward step towards optimum (minimum)
-      #Delta <- chol2inv(chol(H), chol2inv(t(chol(H)), -gradient))
-      Delta <- backsolve(chol(H), forwardsolve(t(chol(H)), -gradient))
-      
+      #Delta <- chol2inv(chol(H))%*%chol2inv(t(chol(H)))%*%(-gradient)
+      #Delta <- backsolve(chol(H), forwardsolve(t(chol(H)), -gradient))
+      Delta <- Delta(H,gradient)
       #try the max.half step halvings
       half <- 0
       while(is.finite(func(theta+Delta),...)==FALSE || any(is.finite(grad(theta+Delta),...))==FALSE ||any(is.finite(hess(theta+Delta),...))==FALSE){
