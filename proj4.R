@@ -1,6 +1,20 @@
-Delta <- function(A,gradient){
-  Delta <- t(chol2inv(chol(A))%*%(-gradient))
-}
+"Overview:
+The whole file is about an R function, newt, implementing Newton’s method for
+minimization of functions. In the program, we are mainly divided into six steps. 
+Step 1: evaluate function value, gradient and hessian matrix
+Step 2: test whether k-step theta is minimum and terminate if it is.
+Step 3: if k-step hessian matrix is not positive definite, perturb it.
+Step 4: solve H*Delta = -gradient for the search direction Delta.
+Step 5: if function value of next step is not less than this step,repeatedly 
+ halve Delta until it is.
+Step 6: set k+1-step theta = k-step theta + Delta, 
+ increment k by 1 and return to Step 1
+We multiply a small multiple (1e-10) of the norm of the Hessian matrix to perturb it
+And the project issue errors or warnings by try() function when the objective or 
+derivatives are not finite at the initial theta, the step fails to reduce 
+the objective, maxit is reached without convergence and the Hessian 
+is not positive definite at convergence.
+"
 
 newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,maxit=100,max.half=20,eps=1e-6){
   f <- func(theta, ...)
@@ -13,7 +27,7 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,maxit=100,max.h
       H <- grad(th1,...)
       H[,i] <- (H - gradient)/eps
     }
-    H <- 0.5 * (t(H) + H)
+    H <-(t(H) + H)/2
   }
 
   if(is.finite(f)==FALSE || any(is.finite(gradient))==FALSE || any(is.finite(H))==FALSE){
@@ -33,9 +47,9 @@ newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,maxit=100,max.h
         per_iter <- per_iter + 1
       }
       # Calculate forward step towards optimum (minimum)
-      #Delta <- t(chol2inv(chol(H))%*%(-gradient))
+      Delta <- t(chol2inv(chol(H))%*%(-gradient))
       #Delta <- backsolve(chol(H), forwardsolve(t(chol(H)), -gradient))
-      Delta <- Delta(H,gradient)
+      #Delta <- Delta(H,gradient)
       #try the max.half step halvings
       half <- 0
       while(is.finite(func(theta+Delta),...)==FALSE || any(is.finite(grad(theta+Delta),...))==FALSE ||any(is.finite(hess(theta+Delta),...))==FALSE){
@@ -100,3 +114,5 @@ Output1 <- newt(c(1, 1),rb,gb,hb)
 Output2<-newt(c(40,3.14),rb,gb,hb)
 
 Output3<-newt(c(20,20),rb,gb,hb)
+Output4<-newt(c(1.037, 1.076),rb,gb,hb)
+
