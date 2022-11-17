@@ -20,50 +20,62 @@
 
 newt <- function(theta,func,grad,hess=NULL,...,tol=1e-8,fscale=1,maxit=100,max.half=20,eps=1e-6){
   #calculate f, gradient, Hessian at the initial theta
-  f <- func(theta, ...)
-  gradient <- grad(theta, ...)
-  H <- hess(theta,...)
+  f <- func(theta, ...) # the objective function to minimize at the initial theta
+  gradient <- grad(theta, ...)# the gradient at the initial theta
+  H <- hess(theta,...) # the Hessian matrix at the initial theta
   
   #check Hessian and recalculate hessian by finite differencing if has no Hessian attribute
   if (any(is.null(H))) {
     #create a new matrix for Hessian
     H <- matrix(0, nrow = length(theta), ncol = length(theta))
+    # 
     for (i in 1:length(theta)){
       th1 <- theta; th1[i] <- th1[i]+eps
-      H <- grad(th1,...)
+      H <- grad(th1,...) # 
       H[i,] <- (H - gradient)/eps
     }
     #make Hessian matrix symmetric
-    H <- 0.5 * (t(H) + H)
+    H <- (t(H) + H)/2
   }
   
   #check objective and derivatives are whether nor not finite
   if(is.finite(f)==FALSE || any(is.finite(gradient))==FALSE || any(is.finite(H))==FALSE){
+    # if they are not finitez, stop and print the error information
     stop("The objective or derivatives are not finite at the initial theta.")
   }
-  
+  # start iteration
   iter <- 0
+  # Check if the maximum number of loops has been reached.
   while(iter<=maxit){
     #convergence check
     while(max(abs(gradient)) > tol*(abs(f)+fscale)){
       per_iter <- 0
       #perturb Hessian if Hessian is not positive definite
       while(isTRUE(inherits(try(chol(H), silent = TRUE), "try-error"))){
-        I <- diag(nrow = nrow(H))
-        H <- H + I*norm(H)*eps*10^per_iter
-        per_iter <- per_iter + 1
+        I <- diag(nrow = nrow(H)) # create a identity matrix
+        #multiply a small multiple (1e-10) of the norm of the Hessian matrix
+        H <- H + I*norm(H)*eps*10^per_iter 
+        per_iter <- per_iter + 1 # Increment the number of interation by one.
       }
-      #calculate Delta
+      #calculate Delta = inv(H)*(-gradient)
       Delta <- t(chol2inv(chol(H))%*%(-gradient))
       
       #try the max.half step halving
       half <- 0
+      #check if the minimum value of the function at the next step is 
+      # less than the previous step.
       while (func(theta + Delta, ...)[1] > f[1]){
+        # if the minimum value at the next step is greater than the pervious step
         if(half < max.half){
+          #step halving
           Delta <- Delta/2
+          #Increment the number of interation by one.
           half <- half + 1
         }else{
-          stop("The step fails to reduce the objective despite trying 20 halvings.")
+          #If the step exceeds the max.half steps, the minimum value of the function 
+          # in the next step is still greater than the previous step.
+          #we stop and print the error information.
+          stop("The step fails to reduce the objective despite trying",max.half,"halvings.")
         }
       }
       
